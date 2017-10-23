@@ -42,9 +42,12 @@ public class ContactInfoFragment  extends Fragment  {
 
 
 
+
+
     protected  void updateFragmentView(long contactid){
+
         TextView text = getActivity().findViewById(R.id.contact_id);
-        text.setText("holaa" + contactid);
+        if(text!=null)text.setText("holaaaa" + contactid);
 
     }
 

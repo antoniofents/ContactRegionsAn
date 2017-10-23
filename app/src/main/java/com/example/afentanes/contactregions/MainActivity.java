@@ -8,6 +8,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.AppCompatActivity;
@@ -26,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
 
     SimpleCursorAdapter mCursorAdapter;
 
+    long currentContactId;
     private final static int[] TO_IDS = {
             R.id.contac_name_id
     };
@@ -39,20 +41,24 @@ public class MainActivity extends AppCompatActivity {
 
 
         if(savedInstanceState!=null){
-            Long currentContactId = savedInstanceState.getLong("currentContactId");
+             currentContactId = savedInstanceState.getLong("currentContactId");
 
-            contactSelected(currentContactId);
         }
         setContentView(R.layout.activity_main);
         init();
 
+    }
 
-
-
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if(currentContactId>0)
+            contactSelected(currentContactId);
     }
 
     private void contactSelected(long id){
 
+        currentContactId=id;
         if(getCurrentFragment()!=null){
             ContactInfoFragment fragment = (ContactInfoFragment)  getCurrentFragment();
             fragment.updateFragmentView(id);
@@ -116,8 +122,6 @@ public class MainActivity extends AppCompatActivity {
                 contactSelected(mContactId);
 
 
-
-
             }
         });
 
@@ -136,10 +140,20 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
+
     private Fragment getCurrentFragment() {
         return getSupportFragmentManager().findFragmentByTag(getResources().getString(R.string.current_fragment_tag));
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (currentContactId>0)
+        outState.putLong("currentContactId", currentContactId);
+
+
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

@@ -1,6 +1,7 @@
 package com.example.afentanes.contactregions;
 
 import android.Manifest;
+import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.provider.ContactsContract;
@@ -21,6 +22,9 @@ import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -54,7 +58,12 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
         if(currentContactId>0)
             contactSelected(currentContactId);
+
     }
+
+
+
+
 
     private void contactSelected(long id){
 
@@ -91,17 +100,23 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                Intent intent = new Intent(Intent.ACTION_INSERT);
+                intent.setType(ContactsContract.Contacts.CONTENT_TYPE);
+                if (intent.resolveActivity(getPackageManager()) != null) {
+                    startActivity(intent);
+                }
             }
+
         });
         initializeContactList();
     }
 
 
-
-
-
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        initializeContactList();
+    }
 
     private void initializeContactList() {
 
@@ -115,11 +130,15 @@ public class MainActivity extends AppCompatActivity {
 
 
                 Cursor cursor =((SimpleCursorAdapter)adapterView.getAdapter()).getCursor();
-                // Move to the selected contact
-                cursor.moveToPosition(position);
-                // Get the _ID value
-                long mContactId = cursor.getLong(ContactConstants.CONTACT_ID_INDEX);
-                contactSelected(mContactId);
+
+                if(cursor.moveToFirst()){
+                    // Move to the selected contact
+                    cursor.moveToPosition(position);
+                    // Get the _ID value
+                    long mContactId = cursor.getLong(ContactConstants.CONTACT_ID_INDEX);
+                    contactSelected(mContactId);
+                }
+
 
 
             }
@@ -137,9 +156,34 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
+        getHolidays(cursor);
+
 
     }
 
+    private void getHolidays(Cursor cursor) {
+        String phone;
+        cursor.moveToFirst();
+        phone = getPhone(cursor.getString(ContactConstants.CONTACT_ID_INDEX));
+        while (cursor.moveToNext()) {
+            phone = getPhone(cursor.getString(ContactConstants.CONTACT_ID_INDEX));
+        }
+    }
+
+
+    public String getPhone(String id)
+    {
+        String number = "";
+        Cursor phones = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, ContactsContract.CommonDataKinds.Phone._ID + " = " + id, null, null);
+
+        if(phones.getCount()>0){
+            phones.moveToFirst();
+            number= phones.getString(phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+        }
+
+        phones.close();
+        return number;
+    }
 
 
     private Fragment getCurrentFragment() {
@@ -154,6 +198,8 @@ public class MainActivity extends AppCompatActivity {
 
 
     }
+
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

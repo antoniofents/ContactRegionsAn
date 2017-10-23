@@ -2,4 +2,6 @@
     <string name="app_name">ContactRegions</string>
     <string name="action_settings">Settings</string>
     <string name="current_fragment_tag">contacts_desc_fragment</string>
+    <string name="test_key">d6fa666b-f879-4fd6-b85c-1afb00a4f20</string>
+
 </resources>

@@ -14,9 +14,7 @@ public interface ContactConstants {
     public  static final String[] PROJECTION =
             {
                     ContactsContract.Contacts._ID,
-                    ContactsContract.Contacts.LOOKUP_KEY,
-                    ContactsContract.Contacts.DISPLAY_NAME_PRIMARY
-
+                    ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
             };
 
     @SuppressLint("InlinedApi")

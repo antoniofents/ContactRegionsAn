@@ -4,9 +4,8 @@
     android:layout_height="match_parent">
 
     <TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@android:id/text1"
+    android:id="@+id/contac_name_id"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:clickable="true"/>
+    android:layout_height="wrap_content" />
 
 </LinearLayout>

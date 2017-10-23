@@ -1,35 +1,81 @@
 package com.example.afentanes.contactregions;
 
+import android.Manifest;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.Fragment;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.AdapterView;
+import android.widget.ListView;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
+
+
+    SimpleCursorAdapter mCursorAdapter;
+
+    private final static int[] TO_IDS = {
+            R.id.contac_name_id
+    };
+
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+
+        if(savedInstanceState!=null){
+            Long currentContactId = savedInstanceState.getLong("currentContactId");
+
+            contactSelected(currentContactId);
+        }
         setContentView(R.layout.activity_main);
         init();
 
-        try{
-            ContactInfoFragment contactInfoFragment = new ContactInfoFragment();
-            contactInfoFragment.setArguments(getIntent().getExtras());
 
-            getSupportFragmentManager().beginTransaction()
-                    .add(R.id.fragment_container, contactInfoFragment).commit();
-        }catch(Exception e){
-            Log.i("a","a");
-        }
 
 
     }
+
+    private void contactSelected(long id){
+
+        if(getCurrentFragment()!=null){
+            ContactInfoFragment fragment = (ContactInfoFragment)  getCurrentFragment();
+            fragment.updateFragmentView(id);
+        }else{
+            try {
+                ContactInfoFragment contactInfoFragment = new ContactInfoFragment();
+                if(getIntent().getExtras()==null){
+                    Bundle bundle = new Bundle();
+                    bundle.putLong(ContactConstants.CONTACT_BUNDLE_ID, id);
+                    contactInfoFragment.setArguments(bundle);
+                }
+
+                contactInfoFragment.getArguments().putLong(ContactConstants.CONTACT_BUNDLE_ID, id);
+
+                getSupportFragmentManager().beginTransaction()
+                        .add(R.id.fragment_container, contactInfoFragment, getResources().getString(R.string.current_fragment_tag)).commit();
+            } catch (Exception e) {
+                Log.i("a", "a");
+            }
+        }
+
+    }
+
 
     private void init() {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -43,7 +89,57 @@ public class MainActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });
+        initializeContactList();
     }
+
+
+
+
+
+
+    private void initializeContactList() {
+
+        Cursor cursor = this.getContentResolver().query(ContactsContract.Contacts.CONTENT_URI, ContactConstants.PROJECTION, null, null, null);
+        ListView mContactsList =
+                (ListView) this.findViewById(R.id.contact_list);
+
+        mContactsList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long rowId) {
+
+
+                Cursor cursor =((SimpleCursorAdapter)adapterView.getAdapter()).getCursor();
+                // Move to the selected contact
+                cursor.moveToPosition(position);
+                // Get the _ID value
+                long mContactId = cursor.getLong(ContactConstants.CONTACT_ID_INDEX);
+                contactSelected(mContactId);
+
+
+
+
+            }
+        });
+
+        if (cursor.getCount() > 0) {
+
+            mCursorAdapter = new SimpleCursorAdapter(
+                    this,
+                    R.layout.contact_item,
+                    cursor,
+                    ContactConstants.FROM_COLUMNS, TO_IDS,
+                    0);
+            mContactsList.setAdapter(mCursorAdapter);
+
+        }
+
+
+    }
+
+    private Fragment getCurrentFragment() {
+        return getSupportFragmentManager().findFragmentByTag(getResources().getString(R.string.current_fragment_tag));
+    }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -51,6 +147,7 @@ public class MainActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {

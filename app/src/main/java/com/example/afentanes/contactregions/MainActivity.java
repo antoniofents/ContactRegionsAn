@@ -3,6 +3,7 @@ package com.example.afentanes.contactregions;
 import android.Manifest;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.support.design.widget.FloatingActionButton;
@@ -164,17 +165,28 @@ public class MainActivity extends AppCompatActivity {
     private void getHolidays(Cursor cursor) {
         String phone;
         cursor.moveToFirst();
-        phone = getPhone(cursor.getString(ContactConstants.CONTACT_ID_INDEX));
+        String contactId = cursor.getString(ContactConstants.CONTACT_ID_INDEX);
+
+        phone = getPhone(contactId);
         while (cursor.moveToNext()) {
             phone = getPhone(cursor.getString(ContactConstants.CONTACT_ID_INDEX));
         }
     }
 
 
-    public String getPhone(String id)
+    public String getPhone(String id){
+
+        String phone =getPhoneInfo(id,ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
+        if(phone.isEmpty()){
+            phone= getPhoneInfo(id, ContactsContract.Data.CONTENT_URI);
+        }
+        return phone;
+    }
+    public String getPhoneInfo(String id,Uri contentUri )
     {
         String number = "";
-        Cursor phones = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, ContactsContract.CommonDataKinds.Phone._ID + " = " + id, null, null);
+
+        Cursor phones = getContentResolver().query(contentUri, null, ContactsContract.CommonDataKinds.Phone._ID + " = " + id, null, null);
 
         if(phones.getCount()>0){
             phones.moveToFirst();

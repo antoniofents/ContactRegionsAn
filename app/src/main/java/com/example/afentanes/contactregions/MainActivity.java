@@ -45,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
 
+
         if(savedInstanceState!=null){
              currentContactId = savedInstanceState.getLong("currentContactId");
 
@@ -154,10 +155,11 @@ public class MainActivity extends AppCompatActivity {
                     ContactConstants.FROM_COLUMNS, TO_IDS,
                     0);
             mContactsList.setAdapter(mCursorAdapter);
+            getHolidays(cursor);
 
         }
 
-        getHolidays(cursor);
+
 
 
     }
@@ -175,22 +177,32 @@ public class MainActivity extends AppCompatActivity {
 
 
     public String getPhone(String id){
-
-        String phone =getPhoneInfo(id,ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
+        String phone =getPhoneInfo(id,false);
         if(phone.isEmpty()){
-            phone= getPhoneInfo(id, ContactsContract.Data.CONTENT_URI);
+            phone= getPhoneInfo(id ,true);
         }
         return phone;
     }
-    public String getPhoneInfo(String id,Uri contentUri )
+    public String getPhoneInfo(String id, boolean fromData )
     {
         String number = "";
+        Cursor phones;
+        if(fromData){
 
-        Cursor phones = getContentResolver().query(contentUri, null, ContactsContract.CommonDataKinds.Phone._ID + " = " + id, null, null);
+            String selectionFromData =
+                    ContactsContract.Data.RAW_CONTACT_ID+ " =? "
+                    + " AND " + ContactsContract.Data.MIMETYPE + "='" + ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE + "'";
+            phones = getContentResolver().query(ContactsContract.Data.CONTENT_URI, null, selectionFromData,new String[] {String.valueOf(id)}, null);
+        }else{
+            phones = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,new String [] {ContactsContract.Contacts._ID,ContactsContract.CommonDataKinds.Phone._ID,  ContactsContract.CommonDataKinds.Phone.NUMBER}, ContactsContract.CommonDataKinds.Phone._ID + " =? " , new String[] {String.valueOf(id)}, null);
+        }
+
+        //ContactsContract.Data.CONTACT_ID
 
         if(phones.getCount()>0){
             phones.moveToFirst();
-            number= phones.getString(phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+            number=phones.getString(phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+
         }
 
         phones.close();

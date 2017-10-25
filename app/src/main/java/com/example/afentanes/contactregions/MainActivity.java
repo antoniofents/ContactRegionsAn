@@ -2,52 +2,45 @@ package com.example.afentanes.contactregions;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.net.Uri;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v4.content.CursorLoader;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.ListView;
-import android.widget.Toast;
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
+import com.example.afentanes.contactregions.tasks.CountryCodesTask;
+import com.example.afentanes.contactregions.tasks.HolidaysTask;
+
+import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity {
 
 
-    SimpleCursorAdapter mCursorAdapter;
-
     long currentContactId;
+    HashMap<String, String> countryHolidays = new HashMap();
     private final static int[] TO_IDS = {
             R.id.contac_name_id
     };
-
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
 
-
-        if(savedInstanceState!=null){
-             currentContactId = savedInstanceState.getLong("currentContactId");
+        if (savedInstanceState != null) {
+            currentContactId = savedInstanceState.getLong("currentContactId");
 
         }
         setContentView(R.layout.activity_main);
@@ -58,32 +51,34 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        if(currentContactId>0)
+        if (currentContactId > 0)
             contactSelected(currentContactId);
 
     }
 
 
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        initializeContactList();
+    }
 
 
+    private void contactSelected(long id) {
 
-    private void contactSelected(long id){
-
-        currentContactId=id;
-        if(getCurrentFragment()!=null){
-            ContactInfoFragment fragment = (ContactInfoFragment)  getCurrentFragment();
+        currentContactId = id;
+        if (getCurrentFragment() != null) {
+            ContactInfoFragment fragment = (ContactInfoFragment) getCurrentFragment();
             fragment.updateFragmentView(id);
-        }else{
+        } else {
             try {
                 ContactInfoFragment contactInfoFragment = new ContactInfoFragment();
-                if(getIntent().getExtras()==null){
+                if (getIntent().getExtras() == null) {
                     Bundle bundle = new Bundle();
                     bundle.putLong(ContactConstants.CONTACT_BUNDLE_ID, id);
                     contactInfoFragment.setArguments(bundle);
                 }
-
                 contactInfoFragment.getArguments().putLong(ContactConstants.CONTACT_BUNDLE_ID, id);
-
                 getSupportFragmentManager().beginTransaction()
                         .add(R.id.fragment_container, contactInfoFragment, getResources().getString(R.string.current_fragment_tag)).commit();
             } catch (Exception e) {
@@ -94,7 +89,48 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    private ContactAdapter getContactsAdapter(Cursor cursor) {
+
+        Contact[] contacts = new Contact[cursor.getCount()];
+        for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext()) {
+            long id = cursor.getLong(ContactConstants.CONTACT_ID_INDEX);
+            Contact contact = new Contact(id, cursor.getString(1), getPhoneInfo(id));
+            contacts[cursor.getPosition()] = contact;
+        }
+        return new ContactAdapter(findViewById(R.id.contact_list).getContext(), contacts, countryHolidays, getResources().getString(R.string.holidays_url), getResources().getString(R.string.test_key));
+    }
+
+
+
+    public String getPhoneInfo(long id) {
+
+        String number = "";
+        Cursor phones;
+
+        // its also possible to get the contacts phones from ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+        //but in some cases the phones are not available in that resource
+        //here is how to get the cursor from that URI
+        // getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,new String [] {ContactsContract.Contacts._ID,ContactsContract.CommonDataKinds.Phone._ID,  ContactsContract.CommonDataKinds.Phone.NUMBER}, ContactsContract.CommonDataKinds.Phone._ID + " =? " , new String[] {String.valueOf(id)}, null);
+
+        String selectionFromData =
+                ContactsContract.Data.RAW_CONTACT_ID + " =? "
+                        + " AND " + ContactsContract.Data.MIMETYPE + "='" + ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE + "'";
+        phones = getContentResolver().query(ContactsContract.Data.CONTENT_URI, null, selectionFromData, new String[]{String.valueOf(id)}, null);
+
+
+        if (phones.getCount() > 0) {
+            phones.moveToFirst();
+            number = phones.getString(phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+
+        }
+
+        phones.close();
+        return number;
+    }
+
+
     private void init() {
+        checkForPermissions();
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -110,14 +146,13 @@ public class MainActivity extends AppCompatActivity {
             }
 
         });
+        if (ContactConstants.COUNTRY_CODE_MAP.isEmpty()) {
+            new CountryCodesTask().execute(getResources().openRawResource(R.raw.country_codes_map));
+        }
         initializeContactList();
-    }
 
 
-    @Override
-    protected void onRestart() {
-        super.onRestart();
-        initializeContactList();
+
     }
 
     private void initializeContactList() {
@@ -130,99 +165,32 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int position, long rowId) {
 
+                ContactAdapter adapter = (ContactAdapter) adapterView.getAdapter();
 
-                Cursor cursor =((SimpleCursorAdapter)adapterView.getAdapter()).getCursor();
-
-                if(cursor.moveToFirst()){
-                    // Move to the selected contact
-                    cursor.moveToPosition(position);
-                    // Get the _ID value
-                    long mContactId = cursor.getLong(ContactConstants.CONTACT_ID_INDEX);
-                    contactSelected(mContactId);
-                }
-
-
-
+                contactSelected(adapter.getItem(position).id);
             }
         });
 
         if (cursor.getCount() > 0) {
-
-            mCursorAdapter = new SimpleCursorAdapter(
-                    this,
-                    R.layout.contact_item,
-                    cursor,
-                    ContactConstants.FROM_COLUMNS, TO_IDS,
-                    0);
-            mContactsList.setAdapter(mCursorAdapter);
-            getHolidays(cursor);
+            mContactsList.setAdapter(getContactsAdapter(cursor));
 
         }
-
-
-
 
     }
-
-    private void getHolidays(Cursor cursor) {
-        String phone;
-        cursor.moveToFirst();
-        String contactId = cursor.getString(ContactConstants.CONTACT_ID_INDEX);
-
-        phone = getPhone(contactId);
-        while (cursor.moveToNext()) {
-            phone = getPhone(cursor.getString(ContactConstants.CONTACT_ID_INDEX));
-        }
-    }
-
-
-    public String getPhone(String id){
-        String phone =getPhoneInfo(id,false);
-        if(phone.isEmpty()){
-            phone= getPhoneInfo(id ,true);
-        }
-        return phone;
-    }
-    public String getPhoneInfo(String id, boolean fromData )
-    {
-        String number = "";
-        Cursor phones;
-        if(fromData){
-
-            String selectionFromData =
-                    ContactsContract.Data.RAW_CONTACT_ID+ " =? "
-                    + " AND " + ContactsContract.Data.MIMETYPE + "='" + ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE + "'";
-            phones = getContentResolver().query(ContactsContract.Data.CONTENT_URI, null, selectionFromData,new String[] {String.valueOf(id)}, null);
-        }else{
-            phones = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,new String [] {ContactsContract.Contacts._ID,ContactsContract.CommonDataKinds.Phone._ID,  ContactsContract.CommonDataKinds.Phone.NUMBER}, ContactsContract.CommonDataKinds.Phone._ID + " =? " , new String[] {String.valueOf(id)}, null);
-        }
-
-        //ContactsContract.Data.CONTACT_ID
-
-        if(phones.getCount()>0){
-            phones.moveToFirst();
-            number=phones.getString(phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
-
-        }
-
-        phones.close();
-        return number;
-    }
-
 
     private Fragment getCurrentFragment() {
         return getSupportFragmentManager().findFragmentByTag(getResources().getString(R.string.current_fragment_tag));
     }
 
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        if (currentContactId>0)
-        outState.putLong("currentContactId", currentContactId);
-
+        if (currentContactId > 0)
+            outState.putLong(ContactConstants.CURRENT_CONTACT_ID, currentContactId);
+        outState.putSerializable(ContactConstants.COUNTRIES_IN_HOLIDAYS, countryHolidays);
 
     }
-
 
 
     @Override
@@ -246,5 +214,34 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+
+    private void checkForPermissions(){
+        // Here, thisActivity is the current activity
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.INTERNET)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.INTERNET},
+                    1);
+        }
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.READ_CONTACTS)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_CONTACTS},
+                    1);
+        }
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_CONTACTS)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_CONTACTS},
+                    1);
+        }
     }
 }

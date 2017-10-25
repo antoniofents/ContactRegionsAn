@@ -37,13 +37,6 @@ public class ContactInfoFragment  extends Fragment  {
     }
 
 
-
-
-
-
-
-
-
     protected  void updateFragmentView(long contactid){
 
         TextView text = getActivity().findViewById(R.id.contact_id);

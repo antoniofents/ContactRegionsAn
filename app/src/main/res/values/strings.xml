@@ -2,6 +2,7 @@
     <string name="app_name">ContactRegions</string>
     <string name="action_settings">Settings</string>
     <string name="current_fragment_tag">contacts_desc_fragment</string>
-    <string name="test_key">d6fa666b-f879-4fd6-b85c-1afb00a4f20</string>
+    <string name="test_key">622e2498-6c48-4ea5-80f2-61b58ee9a4dc</string>
+    <string name="holidays_url">https://holidayapi.com/v1/holidays?key=</string>
 
 </resources>

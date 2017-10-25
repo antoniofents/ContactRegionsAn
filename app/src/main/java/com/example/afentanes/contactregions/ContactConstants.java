@@ -1,14 +1,20 @@
 package com.example.afentanes.contactregions;
 
 import android.annotation.SuppressLint;
+import android.content.res.Resources;
 import android.os.Build;
 import android.provider.ContactsContract;
+import android.renderscript.ScriptGroup;
 
-/**
- * Created by afentanes on 10/23/17.
- */
+import com.example.afentanes.contactregions.tasks.CountryCodesTask;
 
-public interface ContactConstants {
+import java.io.InputStream;
+import java.util.HashMap;
+
+
+public   abstract class ContactConstants {
+
+    public static HashMap<String, String> COUNTRY_CODE_MAP = new HashMap<>();
 
     @SuppressLint("InlinedApi")
     public  static final String[] PROJECTION =
@@ -27,5 +33,11 @@ public interface ContactConstants {
 
     public static final int CONTACT_ID_INDEX = 0;
 
-    String CONTACT_BUNDLE_ID = "mContactId";
+    public static String CONTACT_BUNDLE_ID = "mContactId";
+    public static String CURRENT_CONTACT_ID = "currentContactId";
+    public static String COUNTRIES_IN_HOLIDAYS = "countrys_holidays";
+
+
+
+
 }
